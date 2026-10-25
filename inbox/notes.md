@@ -1,0 +1,5 @@
+-call the electrician about the fan, no rush
+- renew library card
+-submit the project report by friday
+-buy milk
+-prepare 5 slides for the monday review
