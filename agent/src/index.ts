@@ -16,9 +16,15 @@ const Task = z.object({
 
 const Result = z.object({
   summary: z.string(),
-  tasks: z.array(Task),
+  tasks: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === "object") : v),
+    z.array(Task)
+  ),
 });
-type Parsed = z.infer<typeof Result>;
+type Parsed = {
+  summary: string;
+  tasks: { text: string; deadline: string | null }[];
+};
 
 const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 const WORDS = ["today", "tomorrow", ...DAYS];
@@ -28,8 +34,9 @@ const SYSTEM = [
   "Reply with ONLY a JSON object in this exact shape:",
   '{"summary": "one plain sentence saying what this text is about", "tasks": [{"text": "what to do", "deadline": "day or date, or null"}]}',
   "The summary must be a sentence, not a title.",
-  "Every task must include a deadline key. Use null when there is no deadline.",
-  "Never invent a deadline. Use a day only if the text names it, and use null for anything marked no rush.",
+  "Every task must be an object with a text key and a deadline key. Never use a plain string as a task.",
+  "Use null for deadline when there is none. Never invent a deadline.",
+  "If one sentence asks for two different things, list them as two separate tasks, each with its own deadline.",
   "Only list real action items someone must do. Skip chatter, jokes and invitations.",
   "Never add extra text outside the JSON.",
 ].join("\n");
@@ -38,25 +45,41 @@ function fallback(text: string): Parsed {
   return { summary: text.split("\n")[0].slice(0, 100), tasks: [] };
 }
 
+function dayIn(s: string): string | null {
+  const l = s.toLowerCase();
+  return WORDS.find((w) => l.includes(w)) ?? null;
+}
+
 function ground(r: Parsed, text: string): Parsed {
-  const lower = text.toLowerCase();
-  const keep = (d: string | null) => {
-    if (!d) return null;
-    const found = WORDS.filter((w) => d.toLowerCase().includes(w));
-    if (found.length === 0) return d;
-    return found.every((w) => lower.includes(w)) ? d : null;
+  const lines = text.toLowerCase().split("\n");
+  const sig = (s: string) =>
+    s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+  const nearLine = (task: string) => {
+    const tw = sig(task);
+    let best = "";
+    let bestScore = 0;
+    for (const line of lines) {
+      const lw = sig(line);
+      const score = tw.filter((w) => lw.includes(w)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        best = line;
+      }
+    }
+    return best;
   };
-  const fromText = (s: string) => {
-    const l = s.toLowerCase();
-    return WORDS.find((w) => l.includes(w)) ?? null;
-  };
-  return {
-    summary: r.summary,
-    tasks: r.tasks.map((t) => ({
-      text: t.text,
-      deadline: keep(t.deadline) ?? fromText(t.text),
-    })),
-  };
+  const tasks = r.tasks.map((t) => {
+    const own = dayIn(t.text);
+    if (own) return { text: t.text, deadline: own };
+    if (!t.deadline) return { text: t.text, deadline: null };
+    const d = t.deadline.toLowerCase();
+    const named = WORDS.filter((w) => d.includes(w));
+    if (named.length === 0) return { text: t.text, deadline: t.deadline };
+    const near = nearLine(t.text);
+    const ok = named.every((w) => near.includes(w));
+    return { text: t.text, deadline: ok ? t.deadline : null };
+  });
+  return { summary: r.summary, tasks };
 }
 
 async function ask(text: string): Promise<Parsed> {
@@ -79,7 +102,8 @@ async function ask(text: string): Promise<Parsed> {
         throw new Error("Ollama error " + res.status + ": " + (await res.text()));
       }
       const data = await res.json();
-      return ground(Result.parse(JSON.parse(data.message.content)), text);
+      const parsed = Result.parse(JSON.parse(data.message.content)) as Parsed;
+      return ground(parsed, text);
     } catch (err) {
       console.log("Attempt " + attempt + " failed: " + String(err).slice(0, 120));
     }

@@ -1,19 +1,19 @@
 {
-  "date": "2026-10-25",
+  "date": "2026-10-26",
   "model": "gemma3:1b",
   "priorities": [
     {
-      "text": "Send vendor a reply before Monday.",
-      "deadline": "monday",
+      "text": "Respond to vendor",
+      "deadline": "Monday",
       "source": "email.txt"
     },
     {
-      "text": "prepare 5 slides for the Monday review",
+      "text": "Prepare 5 slides for the Monday review",
       "deadline": "monday",
       "source": "notes.md"
     },
     {
-      "text": "book the meeting room for wednesday",
+      "text": "fill budget sheet by Wednesday night",
       "deadline": "wednesday",
       "source": "groupchat.txt"
     }
@@ -21,20 +21,20 @@
   "sources": [
     {
       "file": "email.txt",
-      "summary": "Submit final presentation slides by Friday."
+      "summary": "Request for presentation slides and vendor communication before Monday."
     },
     {
       "file": "groupchat.txt",
-      "summary": "Riya wants to schedule a lunch, Sam confirms yes, Amit books the meeting room, and Riya sets a reminder for the budget sheet."
+      "summary": "Client demo moved to Thursday afternoon, budget sheet needs to be filled by Wednesday night, vendor invoice needs to be sent, lunch order for demo, laptop charger missing, cat birthday, update slides, and sign off."
     },
     {
       "file": "notes.md",
-      "summary": "The user needs to address a fan issue, renew a library card, submit a project report, buy milk, and prepare five slides for the Monday review."
+      "summary": "Address a fan issue, renew a library card, submit a project report, purchase milk, prepare slides for a Monday review."
     }
   ],
   "stats": {
     "files": 3,
-    "characters": 589,
-    "seconds": 38
+    "characters": 1891,
+    "seconds": 34
   }
 }
